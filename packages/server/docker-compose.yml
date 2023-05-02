@@ -1,0 +1,57 @@
+version: '3.9'
+
+# provide a docker-compose file for a node.js application with nginx, postgres and redis
+services:
+  # the redis database
+  redis:
+    image: redis
+    volumes:
+      - ./redis-data:/data
+  # the node.js application
+  app_1:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "4000:4000"
+    depends_on:
+      - db
+    volumes:
+      - ./mount/src:/app/src
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+  app_2:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - "4001:4000"
+    depends_on:
+      - db
+    volumes:
+      - ./mount/src:/app/src
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+  # the nginx reverse proxy
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - app_1
+      - app_2
+  # the postgres database
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=socketio
+    volumes:
+      - ./postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
